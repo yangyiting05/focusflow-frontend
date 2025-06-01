@@ -3,7 +3,9 @@ Team Name: FocusFlow_2
 Amber Ong Yi Qiu
 Yang Yiting
 
-FocusFlow is a productivity-based web application that helps users create personalised daily timetables based on their goals, priorities and personal needs. 
+Proposed level of achievement: Apollo
+
+Project Scope: FocusFlow is a productivity-based web application that helps users create personalised daily timetables based on their goals, priorities and personal needs. 
 
 Problem Motivation:
 Many individuals struggle with unstructured schedules and an overwhelming list of tasks, leading to stress, procrastination, and reduced productivity. FocusFlow addresses this by using AI to generate personalised daily timetables that help users stay organised and on track to achieve their goals.
