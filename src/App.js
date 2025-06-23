@@ -18,6 +18,11 @@ function App() {
             <Dashboard />
           </PrivateRoute>
         } />
+        <Route path="/todo" element={
+          <PrivateRoute>
+            <TodoPage />
+          </PrivateRoute>
+        } />
       </Routes>
     </Router>
   );
