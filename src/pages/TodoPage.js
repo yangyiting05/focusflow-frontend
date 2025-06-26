@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TaskInput from '../components/TaskInput';
 import './Dashboard.css';
+import './TodoPage.css';
 
 function TodoPage() {
   const [tasks, setTasks] = useState([]);
@@ -60,53 +61,48 @@ function TodoPage() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Not started':
-        return '#f6c90e'; // yellow
+        return '#f6c90e';
       case 'Making progress':
-        return '#00a8f3'; // blue
+        return '#00a8f3';
       case 'Almost completed':
-        return '#38b000'; // green
+        return '#38b000';
       default:
-        return '#ccc'; // gray fallback
+        return '#ccc';
     }
   };
 
   return (
     <div className="dashboard-container">
       <h2 className="dashboard-title">Create a New To-Do List</h2>
-      <p>Here you can add tasks you want to complete today.</p>
+      <p className="dashboard-subtitle">Here you can add tasks you want to complete today.</p>
 
       <TaskInput onAdd={addTask} />
 
-      <ul>
+      <div className="task-list">
         {[...tasks]
           .sort((a, b) => b.urgency - a.urgency)
           .map((task) => (
-            <li key={task.id} style={{ marginBottom: '1rem' }}>
+            <div className="task-card" key={task.id}>
               <input
                 type="checkbox"
                 onChange={() => completeTask(task.id)}
                 title="Mark as done"
-                style={{ marginRight: '0.5rem' }}
               />
-
               {editingTaskId === task.id ? (
-                <div>
+                <div className="task-edit-row">
                   <input
                     type="text"
                     value={editedTask.title}
                     onChange={(e) => handleEditChange('title', e.target.value)}
-                    style={{ marginRight: '0.5rem' }}
                   />
                   <input
                     type="number"
                     value={editedTask.duration}
                     onChange={(e) => handleEditChange('duration', e.target.value)}
-                    style={{ marginRight: '0.5rem' }}
                   />
                   <select
                     value={editedTask.urgency}
                     onChange={(e) => handleEditChange('urgency', e.target.value)}
-                    style={{ marginRight: '0.5rem' }}
                   >
                     {[1, 2, 3, 4, 5].map((u) => (
                       <option key={u} value={u}>Urgency {u}</option>
@@ -115,45 +111,35 @@ function TodoPage() {
                   <select
                     value={editedTask.status}
                     onChange={(e) => handleEditChange('status', e.target.value)}
-                    style={{
-                      marginRight: '0.5rem',
-                      backgroundColor: getStatusColor(editedTask.status),
-                      color: '#fff',
-                      border: 'none',
-                      padding: '4px',
-                      borderRadius: '4px',
-                    }}
                   >
                     <option value="Not started">Not started</option>
                     <option value="Making progress">Making progress</option>
                     <option value="Almost completed">Almost completed</option>
                   </select>
-                  <button onClick={saveEdit}>Save</button>
-                  <button onClick={cancelEdit} style={{ marginLeft: '0.5rem' }}>Cancel</button>
+                  <div className="task-buttons">
+                    <button className="save-btn" onClick={saveEdit}>Save</button>
+                    <button className="cancel-btn" onClick={cancelEdit}>Cancel</button>
+                  </div>
                 </div>
               ) : (
-                <div>
-                  {task.title} – {task.duration} min – Urgency {task.urgency}
+                <div className="task-info-row">
+                  <span className="task-main-text">
+                    {task.title} – {task.duration} min – Urgency {task.urgency}
+                  </span>
                   <span
-                    style={{
-                      marginLeft: '0.5rem',
-                      backgroundColor: getStatusColor(task.status),
-                      color: '#fff',
-                      borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '0.85rem',
-                    }}
+                    className="task-status-badge"
+                    style={{ backgroundColor: getStatusColor(task.status) }}
                   >
                     {task.status}
                   </span>
-                  <button onClick={() => startEdit(task)} style={{ marginLeft: '0.5rem' }}>
+                  <button className="edit-btn" onClick={() => startEdit(task)}>
                     Edit
                   </button>
                 </div>
               )}
-            </li>
+            </div>
           ))}
-      </ul>
+      </div>
     </div>
   );
 }
