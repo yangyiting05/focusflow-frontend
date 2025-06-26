@@ -1,70 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Poppins', sans-serif;
+  background-color: #fffdf5;
+}
+
 .login-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  height: 100vh;
-  background-color: #fffdf5;
-  padding: 20px;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: #fefaf3;
 }
 
-.login-logo {
-  width: 200px;
-  height: auto;
-  margin-bottom: 20px;
+.logo {
+  width: 180px;
+  margin-bottom: 1rem;
+  animation: fadeIn 1s ease;
 }
 
 .login-title {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  font-size: 1.8rem;
   color: #2e3a59;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: center;
 }
 
-.login-form {
+.subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.login-box {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+}
+
+.login-input {
   width: 100%;
-  max-width: 350px;
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.login-form input {
-  padding: 10px;
-  margin-bottom: 1rem;
-  font-size: 1rem;
+  box-sizing: border-box;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 0.5rem;
+  font-size: 1rem;
 }
 
-.login-form button {
-  background-color: #5c7cfa;
+.login-button {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #3b82f6;
   color: white;
-  padding: 12px;
   font-weight: bold;
   border: none;
-  border-radius: 4px;
+  border-radius: 0.5rem;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.login-form button:hover {
-  background-color: #4c6ef5;
+.login-button:hover {
+  background-color: #2563eb;
 }
 
-.signup-prompt {
+.signup-text {
   margin-top: 1rem;
-  font-size: 0.95rem;
-  color: #555;
+  font-size: 0.9rem;
+  color: #444;
+  text-align: center;
 }
 
-.signup-prompt span {
-  color: #5c7cfa;
-  cursor: pointer;
-  font-weight: bold;
+.signup-text a {
+  color: #4a6cf7;
+  text-decoration: none;
+  font-weight: 500;
+  transition: text-decoration 0.2s ease;
 }
 
-.signup-prompt span:hover {
+.signup-text a:hover {
   text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .login-box {
+    padding: 1.5rem;
+    width: 90%;
+  }
 }
