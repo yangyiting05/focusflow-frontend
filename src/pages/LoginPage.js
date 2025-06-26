@@ -1,88 +1,50 @@
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import React from 'react';
-import { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 import './LoginPage.css';
 import logo from '../assets/focusflow-logo.png';
-import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 
 function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const navigate = useNavigate();
-
-  const toggleForm = () => setIsLogin(!isLogin);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email || !password || (!isLogin && !name)) {
-      alert('Please fill in all required fields.');
-      return;
-    }
-  
-    setLoading(true);
-  
+  const handleLogin = async () => {
     try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-        alert('Logged in successfully!');
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert('Account created successfully!');
-      }
-  
+      await signInWithEmailAndPassword(auth, email, password);
       navigate('/dashboard');
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      setError('Invalid email or password');
     }
-  };    
+  };
 
   return (
     <div className="login-container">
-      <img src={logo} alt="FocusFlow Logo" className="login-logo" />
-      <h2 className="login-title">{isLogin ? 'Login to FocusFlow' : 'Create a FocusFlow Account'}</h2>
-
-      <form className="login-form" onSubmit={handleSubmit}>
-        {!isLogin && (
-          <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        )}
+      <img src={logo} alt="FocusFlow Logo" className="logo" />
+      <h2 className="login-title">Login to FocusFlow</h2>
+      <div className="login-box">
         <input
           type="email"
           placeholder="Email"
+          className="login-input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
         />
         <input
           type="password"
           placeholder="Password"
+          className="login-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          required
         />
-        <button type="submit" disabled={loading}>
-  {loading ? 'Loading...' : isLogin ? 'Login' : 'Sign Up'}
-</button>
-      </form>
-
-      <p className="signup-prompt">
-        {isLogin ? "Don't have an account? " : "Already have an account? "}
-        <span onClick={toggleForm}>
-          {isLogin ? 'Sign up here' : 'Login here'}
-        </span>
-      </p>
+        {error && <p style={{ color: 'red', fontSize: '0.8rem' }}>{error}</p>}
+        <button className="login-button" onClick={handleLogin}>Login</button>
+        <p className="signup-text">
+          Don’t have an account? <a href="/register">Sign up here</a>
+        </p>
+      </div>
     </div>
   );
 }
