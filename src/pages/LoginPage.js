@@ -11,7 +11,8 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
       navigate('/dashboard');
@@ -24,7 +25,7 @@ function LoginPage() {
     <div className="login-container">
       <img src={logo} alt="FocusFlow Logo" className="logo" />
       <h2 className="login-title">Login to FocusFlow</h2>
-      <div className="login-box">
+      <form className="login-box" onSubmit={handleLogin}>
         <input
           type="email"
           placeholder="Email"
@@ -40,11 +41,11 @@ function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <p style={{ color: 'red', fontSize: '0.8rem' }}>{error}</p>}
-        <button className="login-button" onClick={handleLogin}>Login</button>
+        <button className="login-button" type="submit">Login</button>
         <p className="signup-text">
           Don’t have an account? <a href="/register">Sign up here</a>
         </p>
-      </div>
+      </form>
     </div>
   );
 }
