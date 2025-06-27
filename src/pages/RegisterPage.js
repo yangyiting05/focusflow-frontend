@@ -11,7 +11,8 @@ function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleRegister = async () => {
+  const handleRegister = async (e) => {
+    e.preventDefault();
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       navigate('/dashboard');
@@ -24,7 +25,7 @@ function RegisterPage() {
     <div className="login-container">
       <img src={logo} alt="FocusFlow Logo" className="logo" />
       <h2 className="login-title">Sign Up for FocusFlow</h2>
-      <div className="login-box">
+      <form className="login-box" onSubmit={handleRegister}>
         <input
           type="email"
           placeholder="Email"
@@ -40,11 +41,11 @@ function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && <p style={{ color: 'red', fontSize: '0.8rem' }}>{error}</p>}
-        <button className="login-button" onClick={handleRegister}>Register</button>
+        <button type="submit" className="login-button">Register</button>
         <p className="signup-text">
           Already have an account? <a href="/">Login here</a>
         </p>
-      </div>
+      </form>
     </div>
   );
 }
