@@ -27,9 +27,8 @@ function TimetablePage() {
     }));
 
     const tasks = [...rawTasks]
-      .filter(t => t.status !== 'Almost completed') // deprioritize done ones
+      .filter(t => t.status !== 'Almost completed')
       .sort((a, b) => {
-        // Sort by status first, then urgency, then duration
         const statusPriority = {
           'Almost completed': 0,
           'Making progress': 1,
@@ -62,7 +61,6 @@ function TimetablePage() {
         currentHour++;
       }
 
-      // Insert a break after every 2 tasks or lunch near 12pm
       if (currentHour < maxHour && (currentHour % 3 === 0 || currentHour === 12)) {
         newTimetable.push({
           time: currentHour,
@@ -74,7 +72,6 @@ function TimetablePage() {
       }
     }
 
-    // Fill up the rest with empty slots
     for (let h = 0; h < 24; h++) {
       if (!newTimetable.find((t) => t.time === h)) {
         newTimetable.push({ time: h, title: '', status: '' });
