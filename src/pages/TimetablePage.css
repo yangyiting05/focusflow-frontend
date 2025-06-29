@@ -1,0 +1,120 @@
+.timetable-container {
+  padding: 2rem;
+  font-family: 'Poppins', sans-serif;
+  background: #f9f9ff;
+  min-height: 100vh;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  background-color: transparent;
+  border: none;
+  color: #444;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.back-btn:hover {
+  text-decoration: underline;
+}
+
+h2 {
+  text-align: center;
+  color: #333;
+  font-size: 1.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-subtitle {
+  text-align: center;
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.time-select-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.time-select-row select {
+  padding: 10px 14px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  min-width: 160px;
+}
+
+.generate-btn {
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  transition: background-color 0.2s ease;
+}
+
+.generate-btn:hover {
+  background-color: #4338ca;
+}
+
+.timetable-grid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+  max-width: 100%;
+}
+
+.time-slot {
+  font-weight: 600;
+  color: #4f46e5;
+  padding-top: 0.75rem;
+  min-height: 60px;
+}
+
+.task-slot {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.task-slot.break {
+  background-color: #ffe8c2;
+}
+
+.task-slot.lunch {
+  background-color: #ffd6cc;
+}
+
+.task-title {
+  font-weight: 600;
+  color: #222;
+}
+
+.task-meta {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.dragging {
+  background-color: #e0e7ff !important;
+  border: 2px dashed #4f46e5;
+}
