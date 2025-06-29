@@ -91,6 +91,12 @@ function TodoPage() {
     }
   };
 
+  const goToTimetable = () => {
+    const sortedTasks = [...tasks].sort((a, b) => a.urgency - b.urgency);
+    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(sortedTasks));
+    navigate('/timetable');
+  };
+
   return (
     <div className="dashboard-container">
       <button className="back-btn" onClick={() => navigate('/dashboard')}>← Back to Dashboard</button>
@@ -124,57 +130,95 @@ function TodoPage() {
       </div>
 
       {tasks.length > 0 && (
-        <div className="task-table">
-          <div className="task-header-row">
-            <span>Task</span>
-            <span>Duration</span>
-            <span>Urgency</span>
-            <span>Status</span>
-            <span>Actions</span>
+        <>
+          <div className="task-table">
+            <div className="task-header-row">
+              <span>Task</span>
+              <span>Duration</span>
+              <span>Urgency</span>
+              <span>Status</span>
+              <span>Actions</span>
+            </div>
+
+            {[...tasks].sort((a, b) => b.urgency - a.urgency).map((task) => (
+              <div className="task-row" key={task.id}>
+                {editingTaskId === task.id ? (
+                  <>
+                    <input
+                      type="text"
+                      className="edit-input"
+                      value={editedTask.title}
+                      onChange={(e) => handleEditChange('title', e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      className="edit-input"
+                      min="0"
+                      step="1"
+                      value={editedTask.duration}
+                      onChange={(e) => handleEditChange('duration', e.target.value)}
+                    />
+                    <select
+                      className="edit-input"
+                      value={editedTask.urgency}
+                      onChange={(e) => handleEditChange('urgency', e.target.value)}
+                    >
+                      <option value="1">Urgency 1 (High)</option>
+                      <option value="2">Urgency 2</option>
+                      <option value="3">Urgency 3</option>
+                      <option value="4">Urgency 4</option>
+                      <option value="5">Urgency 5 (Low)</option>
+                    </select>
+                    <select
+                      className="edit-input"
+                      value={editedTask.status}
+                      onChange={(e) => handleEditChange('status', e.target.value)}
+                    >
+                      <option value="Not started">Not started</option>
+                      <option value="Making progress">Making progress</option>
+                      <option value="Almost completed">Almost completed</option>
+                    </select>
+                    <div className="task-buttons">
+                      <button className="save-btn" onClick={saveEdit}>Save</button>
+                      <button className="cancel-btn" onClick={cancelEdit}>Cancel</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span>{task.title}</span>
+                    <span>{task.duration} min</span>
+                    <span>Urgency {task.urgency}</span>
+                    <span
+                      className="task-status-badge"
+                      style={{ backgroundColor: getStatusColor(task.status) }}
+                    >
+                      {task.status}
+                    </span>
+                    <div className="task-buttons">
+                      <button className="edit-btn" onClick={() => startEdit(task)}>Edit</button>
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          onChange={() => completeTask(task.id)}
+                          className="task-checkbox"
+                        />
+                        <span>Mark as done</span>
+                      </label>
+                      <button className="cancel-btn" onClick={() => deleteTask(task.id)}>Delete</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
           </div>
 
-          {[...tasks].sort((a, b) => b.urgency - a.urgency).map((task) => (
-            <div className="task-row" key={task.id}>
-              {editingTaskId === task.id ? (
-                <>
-                  <input type="text" className="edit-input" value={editedTask.title} onChange={(e) => handleEditChange('title', e.target.value)} />
-                  <input type="number" className="edit-input" min="0" step="1" value={editedTask.duration} onChange={(e) => handleEditChange('duration', e.target.value)} />
-                  <select className="edit-input" value={editedTask.urgency} onChange={(e) => handleEditChange('urgency', e.target.value)}>
-                    <option value="1">Urgency 1 (High)</option>
-                    <option value="2">Urgency 2</option>
-                    <option value="3">Urgency 3</option>
-                    <option value="4">Urgency 4</option>
-                    <option value="5">Urgency 5 (Low)</option>
-                  </select>
-                  <select className="edit-input" value={editedTask.status} onChange={(e) => handleEditChange('status', e.target.value)}>
-                    <option value="Not started">Not started</option>
-                    <option value="Making progress">Making progress</option>
-                    <option value="Almost completed">Almost completed</option>
-                  </select>
-                  <div className="task-buttons">
-                    <button className="save-btn" onClick={saveEdit}>Save</button>
-                    <button className="cancel-btn" onClick={cancelEdit}>Cancel</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <span>{task.title}</span>
-                  <span>{task.duration} min</span>
-                  <span>Urgency {task.urgency}</span>
-                  <span className="task-status-badge" style={{ backgroundColor: getStatusColor(task.status) }}>{task.status}</span>
-                  <div className="task-buttons">
-                    <button className="edit-btn" onClick={() => startEdit(task)}>Edit</button>
-                    <label className="checkbox-label">
-                      <input type="checkbox" onChange={() => completeTask(task.id)} className="task-checkbox" />
-                      <span>Mark as done</span>
-                    </label>
-                    <button className="cancel-btn" onClick={() => deleteTask(task.id)}>Delete</button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+          <div className="timetable-btn-wrapper">
+            <p className="instruction-text">Click next after setting your to-do list.</p>
+            <button className="next-btn" onClick={goToTimetable}>
+              Next
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
