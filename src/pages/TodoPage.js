@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TaskInput from '../components/TaskInput';
 import './Dashboard.css';
+import './TodoPage.css';
 
 function TodoPage() {
   const [tasks, setTasks] = useState([]);

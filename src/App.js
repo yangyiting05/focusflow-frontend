@@ -23,11 +23,14 @@ function App() {
             <TodoPage />
           </PrivateRoute>
         } />
+        <Route path="/timetable" element={
+          <PrivateRoute>
+            <TimetablePage />
+          </PrivateRoute>
+        } />
       </Routes>
     </Router>
   );
 }
 
 export default App;
-
-//hello
