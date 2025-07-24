@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { useNavigate } from 'react-router-dom';
 import './TimetablePage.css';
 import { auth } from '../firebase';
 
@@ -8,158 +8,294 @@ function TimetablePage() {
   const navigate = useNavigate();
   const user = auth.currentUser;
   const userKey = user?.email || 'default';
+
   const [rawTasks, setRawTasks] = useState([]);
+  const [startHour, setStartHour] = useState(8);
+  const [endHour, setEndHour] = useState(22);
   const [timetable, setTimetable] = useState([]);
-  const [startHour, setStartHour] = useState('');
-  const [endHour, setEndHour] = useState('');
+  const [originalTimetable, setOriginalTimetable] = useState([]);
+  const [historyStack, setHistoryStack] = useState([]);
+  const [editMode, setEditMode] = useState(false);
+  const timetableRef = useRef(null);
+
+  const updateCurrentTimeLine = useCallback(() => {
+    const now = new Date();
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const line = document.querySelector('.current-time-line');
+    if (line && totalMinutes >= startHour * 60 && totalMinutes <= endHour * 60) {
+      line.style.top = `${totalMinutes - startHour * 60}px`;
+    }
+    if (timetableRef.current) {
+      timetableRef.current.scrollTop = Math.max(totalMinutes - startHour * 60 - 200, 0);
+    }
+  }, [startHour, endHour]);
 
   useEffect(() => {
     const stored = localStorage.getItem(`tasks-${userKey}`);
-    if (stored) {
-      setRawTasks(JSON.parse(stored));
+    if (stored) setRawTasks(JSON.parse(stored));
+
+    const interval = setInterval(updateCurrentTimeLine, 60000);
+    updateCurrentTimeLine();
+    return () => clearInterval(interval);
+  }, [userKey, startHour, endHour, updateCurrentTimeLine]);
+
+  const generateBreaks = (totalMinsWorked, currentHour, lastBreakTime) => {
+    const isLunch = currentHour >= 11 && currentHour <= 13;
+    const isDinner = currentHour >= 18 && currentHour <= 20;
+
+    if ((isLunch || isDinner) && (!lastBreakTime || currentHour * 60 - lastBreakTime >= 90)) {
+      return { title: 'Meal Time', duration: 45, isBreak: true };
     }
-  }, [userKey]);
+    if (totalMinsWorked >= 150) return { title: 'Meal Time', duration: 40, isBreak: true };
+    if (totalMinsWorked >= 90) return { title: 'Short Break', duration: 15, isBreak: true };
+    return null;
+  };
 
   const generateTimetable = () => {
-    const timetableMap = Array.from({ length: 24 }, (_, i) => ({
-      time: i,
-      task: null,
-    }));
+    const statusPriority = { 'Almost completed': 0, 'Making progress': 1, 'Not started': 2 };
 
-    const tasks = [...rawTasks]
-      .filter(t => t.status !== 'Almost completed')
+    const fixedTasks = rawTasks
+      .filter((t) => t.fixed && t.startTime !== undefined)
+      .map((t) => ({
+        title: t.title,
+        urgency: t.urgency,
+        duration: t.duration,
+        start: t.startTime,
+        fixed: true,
+      }));
+
+    const sortedTasks = rawTasks
+      .filter((t) => !t.fixed)
       .sort((a, b) => {
-        const statusPriority = {
-          'Almost completed': 0,
-          'Making progress': 1,
-          'Not started': 2,
-        };
-        return (
-          statusPriority[a.status] - statusPriority[b.status] ||
-          b.urgency - a.urgency ||
-          a.duration - b.duration
-        );
+        const completionBias = statusPriority[a.status] - statusPriority[b.status];
+        const urgencyBias = a.urgency - b.urgency;
+        const shortTaskBias = a.duration < 30 ? -1 : 0;
+        return completionBias || urgencyBias || shortTaskBias || a.duration - b.duration;
       });
 
-    let currentHour = parseInt(startHour);
-    const maxHour = parseInt(endHour);
+    const newTimetable = [...fixedTasks];
+    let currentMinutes = startHour * 60;
+    let totalMinsWorked = 0;
+    let lastBreakTime = null;
 
-    const newTimetable = [];
+    const isSlotFree = (start, duration) =>
+      !newTimetable.some(
+        (t) =>
+          (start >= t.start && start < t.start + t.duration) ||
+          (start + duration > t.start && start + duration <= t.start + t.duration)
+      );
 
-    for (const task of tasks) {
-      const neededSlots = Math.ceil(task.duration / 60);
-      if (currentHour + neededSlots > maxHour) break;
+    for (let i = 0; i < sortedTasks.length; i++) {
+      const task = sortedTasks[i];
 
-      for (let i = 0; i < neededSlots; i++) {
-        newTimetable.push({
-          time: currentHour,
-          title: i === 0 ? task.title : 'Continued',
-          duration: task.duration,
-          urgency: task.urgency,
-          status: task.status,
-        });
-        currentHour++;
+      while (
+        currentMinutes + task.duration <= endHour * 60 &&
+        !isSlotFree(currentMinutes, task.duration)
+      ) {
+        currentMinutes += 5;
       }
 
-      if (currentHour < maxHour && (currentHour % 3 === 0 || currentHour === 12)) {
-        newTimetable.push({
-          time: currentHour,
-          title: currentHour === 12 ? 'Lunch Break' : 'Short Break',
-          duration: 60,
-          status: 'Break',
-        });
-        currentHour++;
+      if (currentMinutes + task.duration > endHour * 60) break;
+
+      newTimetable.push({
+        title: task.title,
+        urgency: task.urgency,
+        duration: task.duration,
+        start: currentMinutes,
+        fixed: false,
+      });
+
+      currentMinutes += task.duration;
+      totalMinsWorked += task.duration;
+
+      const breakTask = generateBreaks(
+        totalMinsWorked,
+        Math.floor(currentMinutes / 60),
+        lastBreakTime
+      );
+      if (breakTask && currentMinutes + breakTask.duration <= endHour * 60) {
+        while (!isSlotFree(currentMinutes, breakTask.duration)) currentMinutes += 5;
+        breakTask.start = currentMinutes;
+        newTimetable.push(breakTask);
+        lastBreakTime = currentMinutes;
+        currentMinutes += breakTask.duration;
+        totalMinsWorked = 0;
       }
+
+      currentMinutes += 5;
     }
 
-    for (let h = 0; h < 24; h++) {
-      if (!newTimetable.find((t) => t.time === h)) {
-        newTimetable.push({ time: h, title: '', status: '' });
-      }
-    }
-
-    const sorted = newTimetable
-      .filter((slot) => slot.time >= parseInt(startHour) && slot.time <= parseInt(endHour))
-      .sort((a, b) => a.time - b.time);
-
-    setTimetable(sorted);
-    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(sorted));
+    setTimetable(newTimetable.sort((a, b) => a.start - b.start));
+    setOriginalTimetable(newTimetable);
+    setHistoryStack([]);
+    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(newTimetable));
+    setTimeout(updateCurrentTimeLine, 500);
   };
 
   const onDragEnd = (result) => {
-    if (!result.destination) return;
+    if (!result.destination || !editMode) return;
     const items = Array.from(timetable);
     const [moved] = items.splice(result.source.index, 1);
+    if (moved.fixed) return;
     items.splice(result.destination.index, 0, moved);
-    setTimetable(items);
-    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(items));
+
+    let currentMinutes = startHour * 60;
+    const updated = items.map((t) => {
+      if (t.fixed) return t;
+      const updatedTask = { ...t, start: currentMinutes };
+      currentMinutes += t.duration + 5;
+      return updatedTask;
+    });
+
+    setHistoryStack((prev) => [...prev, timetable]);
+    setTimetable(updated.sort((a, b) => a.start - b.start));
   };
+
+  const saveTimetable = () => {
+    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(timetable));
+    setOriginalTimetable(timetable);
+    setHistoryStack([]);
+    setEditMode(false);
+  };
+
+  const undoChanges = () => {
+    if (historyStack.length > 0) {
+      const previous = historyStack[historyStack.length - 1];
+      setHistoryStack(historyStack.slice(0, -1));
+      setTimetable(previous);
+    }
+  };
+
+  const resetTimetable = () => {
+    setTimetable([...originalTimetable]);
+    setHistoryStack([]);
+  };
+
+  const formatTime = (minutes) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  const gridHeight = (endHour - startHour) * 60;
 
   return (
     <div className="timetable-container">
-      <button className="back-btn" onClick={() => navigate('/todo')}>← Back to To-Do List</button>
-      <h2 className="dashboard-title">Your Timetable</h2>
-      <p className="dashboard-subtitle">Drag tasks to customize your day. Breaks are auto-added!</p>
+      <button className="back-btn" onClick={() => navigate('/todo')}>
+        ← Back to To-Do List
+      </button>
+      <h2>Your Timetable</h2>
+      <p className="dashboard-subtitle">
+        Plan your day effectively with smart breaks and fixed-time task support.
+      </p>
 
-      <div className="time-input-row">
+      <div className="time-select-row">
         <label>
           Start Hour:
           <input
             type="number"
-            value={startHour}
-            onChange={(e) => setStartHour(e.target.value)}
             min="0"
             max="23"
-            placeholder="e.g. 8"
+            value={startHour}
+            onChange={(e) => setStartHour(parseInt(e.target.value))}
           />
         </label>
         <label>
           End Hour:
           <input
             type="number"
-            value={endHour}
-            onChange={(e) => setEndHour(e.target.value)}
             min="1"
             max="24"
-            placeholder="e.g. 22"
+            value={endHour}
+            onChange={(e) => setEndHour(parseInt(e.target.value))}
           />
         </label>
-        <button className="generate-btn" onClick={generateTimetable}>Generate Timetable</button>
+        <button className="generate-btn" onClick={generateTimetable}>
+          Generate Timetable
+        </button>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="timetable">
-          {(provided) => (
-            <div className="timetable-list" {...provided.droppableProps} ref={provided.innerRef}>
-              {timetable.map((slot, index) => (
-                <Draggable
-                  key={`${slot.time}-${slot.title}-${index}`}
-                  draggableId={`${slot.time}-${slot.title}-${index}`}
-                  index={index}
-                >
-                  {(provided, snapshot) => (
-                    <div
-                      className={`timetable-slot ${snapshot.isDragging ? 'dragging' : ''}`}
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                    >
-                      <div className="time-label">
-                        {String(slot.time).padStart(2, '0')}:00 - {String(slot.time + 1).padStart(2, '0')}:00
-                      </div>
-                      <div className="task-info">
-                        <strong>{slot.title || '—'}</strong>
-                        {slot.status && <div className="status-badge">{slot.status}</div>}
-                      </div>
-                    </div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
+      <div className="action-buttons">
+        {!editMode ? (
+          <button className="edit-btn" onClick={() => setEditMode(true)}>
+            Edit Timetable
+          </button>
+        ) : (
+          <>
+            <button className="save-btn" onClick={saveTimetable}>
+              Save
+            </button>
+            <button className="undo-btn" onClick={undoChanges}>
+              Undo
+            </button>
+            <button className="reset-btn" onClick={resetTimetable}>
+              Reset
+            </button>
+          </>
+        )}
+      </div>
+
+      <div
+        className={`timetable-grid ${editMode ? 'fade-in' : ''}`}
+        style={{ height: `${gridHeight}px` }}
+        ref={timetableRef}
+      >
+        <div className="time-column">
+          {Array.from({ length: endHour - startHour }, (_, i) => (
+            <div key={i} className="time-slot">
+              {String(startHour + i).padStart(2, '0')}:00
             </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+          ))}
+          <div className="current-time-line"></div>
+        </div>
+
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="timetable">
+            {(provided) => (
+              <div className="task-column" {...provided.droppableProps} ref={provided.innerRef}>
+                {timetable.map((slot, index) => {
+                  const top = slot.start - startHour * 60;
+                  const height = (slot.duration / 60) * 60;
+                  return (
+                    <Draggable
+                      key={`task-${index}`}
+                      draggableId={`task-${index}`}
+                      index={index}
+                      isDragDisabled={!editMode || slot.fixed}
+                    >
+                      {(provided) => (
+                        <div
+                          className={`task-slot ${slot.fixed ? 'fixed' : ''} urgency-${
+                            slot.urgency
+                          }`}
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            top: `${Math.round(top / 5) * 5}px`,
+                            height: `${Math.round(height / 5) * 5}px`,
+                          }}
+                          title={`${slot.title} | Urgency: ${slot.urgency || '-'} | Duration: ${
+                            slot.duration
+                          } mins`}
+                        >
+                          <div className="task-title">
+                            {`${slot.title} (${formatTime(slot.start)} - ${formatTime(
+                              slot.start + slot.duration
+                            )})`}
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
     </div>
   );
 }
