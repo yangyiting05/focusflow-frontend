@@ -1,24 +1,28 @@
 .timetable-container {
   padding: 2rem;
   font-family: 'Poppins', sans-serif;
-  background: #f9f9ff;
+  background: #fffdf5;
   min-height: 100vh;
   max-width: 1100px;
   margin: 0 auto;
+  position: relative;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .back-btn {
-  background-color: transparent;
+  background: none;
   border: none;
-  color: #444;
+  color: #555;
   font-size: 0.95rem;
   cursor: pointer;
   margin-bottom: 1rem;
 }
-
-.back-btn:hover {
-  text-decoration: underline;
-}
+.back-btn:hover { text-decoration: underline; }
 
 h2 {
   text-align: center;
@@ -31,7 +35,8 @@ h2 {
   text-align: center;
   font-size: 1rem;
   color: #666;
-  margin-bottom: 1.5rem;
+  margin: 0 auto 1.5rem auto;
+  max-width: 600px;
 }
 
 .time-select-row {
@@ -39,15 +44,14 @@ h2 {
   justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
-
-.time-select-row select {
-  padding: 10px 14px;
-  font-size: 1rem;
+.time-select-row input {
+  padding: 6px 10px;
+  font-size: 0.9rem;
   border: 1px solid #ccc;
   border-radius: 6px;
-  min-width: 160px;
+  width: 80px;
 }
 
 .generate-btn {
@@ -58,63 +62,154 @@ h2 {
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   cursor: pointer;
-  margin-top: 1rem;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
+.generate-btn:hover { background-color: #4338ca; transform: scale(1.02); }
 
-.generate-btn:hover {
-  background-color: #4338ca;
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
 }
+.action-buttons button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.edit-btn { background-color: #4f46e5; color: #fff; }
+.edit-btn:hover { background-color: #4338ca; }
+.save-btn { background-color: #38b000; color: #fff; }
+.save-btn:hover { background-color: #2d8f00; }
+.undo-btn { background-color: #facc15; color: #333; }
+.undo-btn:hover { background-color: #eab308; }
+.reset-btn { background-color: #ef4444; color: #fff; }
+.reset-btn:hover { background-color: #dc2626; }
 
 .timetable-grid {
   display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 1rem;
-  margin-top: 2rem;
-  max-width: 100%;
+  grid-template-columns: 100px 1fr;
+  position: relative;
+  border-top: 1px solid #ddd;
+  background: #fffdf5;
+}
+
+.time-column {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  background: #fffdf5;
+  z-index: 5;
 }
 
 .time-slot {
+  height: 60px;
+  border-bottom: 1px solid #e0e0e0;
   font-weight: 600;
   color: #4f46e5;
-  padding-top: 0.75rem;
-  min-height: 60px;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
 }
+
+.current-time-line {
+  position: absolute;
+  left: 100px;
+  right: 0;
+  height: 2px;
+  background: red;
+  z-index: 10;
+  transition: top 0.4s ease;
+}
+
+.task-column { position: relative; }
 
 .task-slot {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  padding: 12px 16px;
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: background-color 0.2s ease;
+  position: absolute;
+  width: calc(100% - 20px);
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: top 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+  animation: fadeIn 0.5s ease;
 }
-
-.task-slot.break {
-  background-color: #ffe8c2;
-}
-
-.task-slot.lunch {
-  background-color: #ffd6cc;
+.task-slot.dragging {
+  opacity: 0.85;
+  transform: scale(1.02);
+  border: 2px dashed #4f46e5;
 }
 
 .task-title {
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #222;
+  color: #333;
+  line-height: 1.2;
+  word-wrap: break-word;
+}
+.task-slot.small-text .task-title { font-size: 0.65rem; }
+
+.task-slot:hover {
+  transform: scale(1.01);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.15);
 }
 
-.task-meta {
-  font-size: 0.85rem;
-  color: #666;
+.task-slot::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.task-slot:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
 }
 
-.dragging {
-  background-color: #e0e7ff !important;
-  border: 2px dashed #4f46e5;
+.resize-handle {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 5px;
+  background: #ccc;
+  border-radius: 3px;
+  cursor: ns-resize;
+}
+
+.highlight-time {
+  background-color: rgba(173, 216, 230, 0.3);
+  transition: background-color 0.4s ease;
+}
+
+.task-slot.urgency-1 { background: #fbeaea; }
+.task-slot.urgency-2 { background: #fff1db; }
+.task-slot.urgency-3 { background: #fffde7; }
+.task-slot.urgency-4 { background: #e8f5e9; }
+.task-slot.urgency-5 { background: #e3f2fd; }
+
+.task-slot.fixed {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(200, 200, 200, 0.3),
+    rgba(200, 200, 200, 0.3) 10px,
+    rgba(255, 255, 255, 0.3) 10px,
+    rgba(255, 255, 255, 0.3) 20px
+  );
+  border: 1px solid #bbb;
 }
