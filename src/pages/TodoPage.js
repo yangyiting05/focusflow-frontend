@@ -121,50 +121,51 @@ function TodoPage() {
       <p className="dashboard-subtitle">Here you can add tasks you want to complete today.</p>
       <p className="urgency-hint">Urgency 1 = Highest priority, Urgency 5 = Lowest priority</p>
 
-      <div className="add-task-row">
-        <input
-          type="text"
-          placeholder="Task name"
-          value={newTask.title}
-          onChange={(e) => handleNewChange('title', e.target.value)}
-        />
-        <input
-          type="number"
-          placeholder="Duration (mins)"
-          min="0"
-          step="1"
-          value={newTask.duration}
-          onChange={(e) => handleNewChange('duration', e.target.value)}
-        />
-        <select value={newTask.urgency} onChange={(e) => handleNewChange('urgency', e.target.value)}>
-          <option value="1">Urgency 1 (High)</option>
-          <option value="2">Urgency 2</option>
-          <option value="3">Urgency 3</option>
-          <option value="4">Urgency 4</option>
-          <option value="5">Urgency 5 (Low)</option>
-        </select>
-
-        <div className="fixed-time-wrapper">
-          <label className="fixed-time-label">
-            Set Fixed Time
-            <input
-              type="checkbox"
-              className="fixed-time-checkbox"
-              checked={newTask.fixed}
-              onChange={(e) => handleNewChange('fixed', e.target.checked)}
-            />
-          </label>
-          {newTask.fixed && (
-            <input
-              type="time"
-              className="fixed-time-input"
-              value={newTask.fixedTime}
-              onChange={(e) => handleNewChange('fixedTime', e.target.value)}
-            />
-          )}
+      {/* ADD TASK ROW */}
+      <div className="add-task-container">
+        <div className="add-task-row">
+          <input
+            type="text"
+            placeholder="Task name"
+            value={newTask.title}
+            onChange={(e) => handleNewChange('title', e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Duration (mins)"
+            min="0"
+            step="1"
+            value={newTask.duration}
+            onChange={(e) => handleNewChange('duration', e.target.value)}
+          />
+          <select value={newTask.urgency} onChange={(e) => handleNewChange('urgency', e.target.value)}>
+            <option value="1">Urgency 1 (High)</option>
+            <option value="2">Urgency 2</option>
+            <option value="3">Urgency 3</option>
+            <option value="4">Urgency 4</option>
+            <option value="5">Urgency 5 (Low)</option>
+          </select>
+          <div className="fixed-time-row">
+            <label className="fixed-time-label">
+              Set Fixed Time
+              <input
+                type="checkbox"
+                className="fixed-time-checkbox"
+                checked={newTask.fixed}
+                onChange={(e) => handleNewChange('fixed', e.target.checked)}
+              />
+            </label>
+            {newTask.fixed && (
+              <input
+                type="time"
+                className="fixed-time-input"
+                value={newTask.fixedTime}
+                onChange={(e) => handleNewChange('fixedTime', e.target.value)}
+              />
+            )}
+          </div>
         </div>
-
-        <button onClick={addTask}>Add Task</button>
+        <button className="add-task-btn" onClick={addTask}>Add Task</button>
       </div>
 
       {tasks.length > 0 && (
