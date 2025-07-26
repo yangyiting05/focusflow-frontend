@@ -1,15 +1,4 @@
-/* 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
-
-
-
-
+/*
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
