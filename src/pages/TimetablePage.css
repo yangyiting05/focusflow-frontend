@@ -213,3 +213,9 @@ h2 {
   );
   border: 1px solid #bbb;
 }
+
+.break-task {
+  background-color: #d4f8d4; 
+  color: #2e7d32; 
+  border: 1px solid #81c784;
+}
