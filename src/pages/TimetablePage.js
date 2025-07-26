@@ -1,3 +1,4 @@
+//test can delete
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +17,8 @@ function TimetablePage() {
   const [originalTimetable, setOriginalTimetable] = useState([]);
   const [historyStack, setHistoryStack] = useState([]);
   const [editMode, setEditMode] = useState(false);
+  const [energyLevel, setEnergyLevel] = useState(5); 
+
   const timetableRef = useRef(null);
 
   /** ✅ Memoized helper for current time line */
@@ -36,13 +39,14 @@ function TimetablePage() {
     const stored = localStorage.getItem(`tasks-${userKey}`);
     if (stored) setRawTasks(JSON.parse(stored));
 
-    const savedTimetable = localStorage.getItem(`timetable-${userKey}`);
-    if (savedTimetable) setTimetable(JSON.parse(savedTimetable));
+    const today = new Date().toISOString().split('T')[0];
+    const storedEnergy = localStorage.getItem(`energy-${today}`);
+    if (storedEnergy) setEnergyLevel(parseInt(storedEnergy));
 
     const interval = setInterval(updateCurrentTimeLine, 60000);
     updateCurrentTimeLine();
     return () => clearInterval(interval);
-  }, [userKey, startHour, endHour, updateCurrentTimeLine]);
+  }, [userKey, updateCurrentTimeLine]);
 
   /** ✅ Memoized break generator */
   const generateBreaks = useCallback((totalMinsWorked, currentHour, lastBreakTime) => {
@@ -52,8 +56,13 @@ function TimetablePage() {
     if ((isLunch || isDinner) && (!lastBreakTime || currentHour * 60 - lastBreakTime >= 90)) {
       return { title: 'Meal Time', duration: 45, isBreak: true };
     }
+
+    if (energyLevel <= 4 && totalMinsWorked >= 60) {
+      return { title: 'Energy Break', duration: 30, isBreak: true };
+    }
     if (totalMinsWorked >= 150) return { title: 'Meal Time', duration: 40, isBreak: true };
     if (totalMinsWorked >= 90) return { title: 'Short Break', duration: 15, isBreak: true };
+
     return null;
   }, []);
 
@@ -83,6 +92,12 @@ function TimetablePage() {
     const sortedTasks = rawTasks
       .filter((t) => !t.fixed)
       .sort((a, b) => {
+        if (energyLevel >= 7) {
+          return b.urgency - a.urgency || statusPriority[a.status] - statusPriority[b.status];
+        }
+        if (energyLevel <= 4) {
+          return a.urgency - b.urgency || statusPriority[a.status] - statusPriority[b.status];
+        }
         const completionBias = statusPriority[a.status] - statusPriority[b.status];
         const urgencyBias = a.urgency - b.urgency;
         const shortTaskBias = a.duration < 30 ? -1 : 0;
@@ -199,6 +214,9 @@ function TimetablePage() {
       <p className="dashboard-subtitle">
         Plan your day effectively with smart breaks and fixed-time task support.
       </p>
+      <p className="dashboard-subtitle">
+        ✅ Today’s Energy Level: <strong>{energyLevel} / 10</strong>
+      </p>
 
       <div className="time-select-row">
         <label>
@@ -270,7 +288,8 @@ function TimetablePage() {
                     >
                       {(provided) => (
                         <div
-                          className={`task-slot ${slot.fixed ? 'fixed' : ''} urgency-${
+                          className={`task-slot ${
+                            slot.isBreak ? 'break-task' : slot.fixed ? 'fixed' : ''} urgency-${
                             slot.urgency
                           }`}
                           ref={provided.innerRef}
@@ -286,9 +305,12 @@ function TimetablePage() {
                           } mins`}
                         >
                           <div className="task-title">
-                            {`${slot.title} (${formatTime(slot.start)} - ${formatTime(
+                            {slot.isBreak
+                              ? slot.title
+                              : slot.title}{' '}
+                            ({formatTime(slot.start)} - {formatTime(
                               slot.start + slot.duration
-                            )})`}
+                            )})
                           </div>
                         </div>
                       )}
@@ -306,3 +328,7 @@ function TimetablePage() {
 }
 
 export default TimetablePage;
+
+
+
+
