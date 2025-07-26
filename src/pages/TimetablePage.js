@@ -21,6 +21,7 @@ function TimetablePage() {
 
   const timetableRef = useRef(null);
 
+  /** ✅ Memoized helper for current time line */
   const updateCurrentTimeLine = useCallback(() => {
     const now = new Date();
     const totalMinutes = now.getHours() * 60 + now.getMinutes();
@@ -33,6 +34,7 @@ function TimetablePage() {
     }
   }, [startHour, endHour]);
 
+  /** ✅ Load tasks & timetable persistence */
   useEffect(() => {
     const stored = localStorage.getItem(`tasks-${userKey}`);
     if (stored) setRawTasks(JSON.parse(stored));
@@ -46,7 +48,8 @@ function TimetablePage() {
     return () => clearInterval(interval);
   }, [userKey, updateCurrentTimeLine]);
 
-  const generateBreaks = (totalMinsWorked, currentHour, lastBreakTime) => {
+  /** ✅ Memoized break generator */
+  const generateBreaks = useCallback((totalMinsWorked, currentHour, lastBreakTime) => {
     const isLunch = currentHour >= 11 && currentHour <= 13;
     const isDinner = currentHour >= 18 && currentHour <= 20;
 
@@ -61,9 +64,19 @@ function TimetablePage() {
     if (totalMinsWorked >= 90) return { title: 'Short Break', duration: 15, isBreak: true };
 
     return null;
-  };
+  }, []);
 
-  const generateTimetable = () => {
+  /** ✅ Memoized slot checker */
+  const isSlotFree = useCallback((newTimetable, start, duration) => {
+    return !newTimetable.some(
+      (t) =>
+        (start >= t.start && start < t.start + t.duration) ||
+        (start + duration > t.start && start + duration <= t.start + t.duration)
+    );
+  }, []);
+
+  /** ✅ Generate timetable */
+  const generateTimetable = useCallback(() => {
     const statusPriority = { 'Almost completed': 0, 'Making progress': 1, 'Not started': 2 };
 
     const fixedTasks = rawTasks
@@ -96,23 +109,14 @@ function TimetablePage() {
     let totalMinsWorked = 0;
     let lastBreakTime = null;
 
-    const isSlotFree = (start, duration) =>
-      !newTimetable.some(
-        (t) =>
-          (start >= t.start && start < t.start + t.duration) ||
-          (start + duration > t.start && start + duration <= t.start + t.duration)
-      );
-
     for (let i = 0; i < sortedTasks.length; i++) {
       const task = sortedTasks[i];
-
       while (
         currentMinutes + task.duration <= endHour * 60 &&
-        !isSlotFree(currentMinutes, task.duration)
+        !isSlotFree(newTimetable, currentMinutes, task.duration)
       ) {
         currentMinutes += 5;
       }
-
       if (currentMinutes + task.duration > endHour * 60) break;
 
       newTimetable.push({
@@ -132,41 +136,45 @@ function TimetablePage() {
         lastBreakTime
       );
       if (breakTask && currentMinutes + breakTask.duration <= endHour * 60) {
-        while (!isSlotFree(currentMinutes, breakTask.duration)) currentMinutes += 5;
+        while (!isSlotFree(newTimetable, currentMinutes, breakTask.duration)) currentMinutes += 5;
         breakTask.start = currentMinutes;
         newTimetable.push(breakTask);
         lastBreakTime = currentMinutes;
         currentMinutes += breakTask.duration;
         totalMinsWorked = 0;
       }
-
       currentMinutes += 5;
     }
 
-    setTimetable(newTimetable.sort((a, b) => a.start - b.start));
-    setOriginalTimetable(newTimetable);
+    const finalTable = newTimetable.sort((a, b) => a.start - b.start);
+    setTimetable(finalTable);
+    setOriginalTimetable(finalTable);
     setHistoryStack([]);
-    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(newTimetable));
+    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(finalTable));
     setTimeout(updateCurrentTimeLine, 500);
-  };
+  }, [rawTasks, startHour, endHour, userKey, generateBreaks, isSlotFree, updateCurrentTimeLine]);
 
+  /** ✅ Drag logic (fixed tasks locked) */
   const onDragEnd = (result) => {
     if (!result.destination || !editMode) return;
     const items = Array.from(timetable);
     const [moved] = items.splice(result.source.index, 1);
     if (moved.fixed) return;
+
+    let targetStart = items[result.destination.index]?.start || moved.start;
+    while (
+      targetStart + moved.duration <= endHour * 60 &&
+      !isSlotFree(items, targetStart, moved.duration)
+    ) {
+      targetStart += 5;
+    }
+    if (targetStart + moved.duration > endHour * 60) return;
+
+    moved.start = targetStart;
     items.splice(result.destination.index, 0, moved);
 
-    let currentMinutes = startHour * 60;
-    const updated = items.map((t) => {
-      if (t.fixed) return t;
-      const updatedTask = { ...t, start: currentMinutes };
-      currentMinutes += t.duration + 5;
-      return updatedTask;
-    });
-
     setHistoryStack((prev) => [...prev, timetable]);
-    setTimetable(updated.sort((a, b) => a.start - b.start));
+    setTimetable(items.sort((a, b) => a.start - b.start));
   };
 
   const saveTimetable = () => {
@@ -243,15 +251,9 @@ function TimetablePage() {
           </button>
         ) : (
           <>
-            <button className="save-btn" onClick={saveTimetable}>
-              Save
-            </button>
-            <button className="undo-btn" onClick={undoChanges}>
-              Undo
-            </button>
-            <button className="reset-btn" onClick={resetTimetable}>
-              Reset
-            </button>
+            <button className="save-btn" onClick={saveTimetable}>Save</button>
+            <button className="undo-btn" onClick={undoChanges}>Undo</button>
+            <button className="reset-btn" onClick={resetTimetable}>Reset</button>
           </>
         )}
       </div>
