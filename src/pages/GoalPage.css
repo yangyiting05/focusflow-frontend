@@ -1,0 +1,65 @@
+.goal-page {
+    width: 100vw;
+    min-height: 100vh;
+    background-color: #fffdf5;
+    padding: 40px 20px;
+    box-sizing: border-box;
+  }
+  
+  .goal-title {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    margin-top: 20px;
+  }
+  
+  .goal-subtitle {
+    text-align: center;
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 30px;
+  }
+  
+  .goal-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .goal-btn {
+    padding: 10px 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .goal-btn:hover {
+    background: #f0f0f0;
+  }
+  
+  .goal-btn.selected {
+    background: #4caf50;
+    color: white;
+    border: 1px solid #4caf50;
+  }
+  
+  .selected-goals {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  .selected-goals ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .selected-goals li {
+    font-size: 1rem;
+    padding: 5px 0;
+  }
+
+  

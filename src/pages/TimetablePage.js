@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ function TimetablePage() {
 
   useEffect(() => {
     const storedTasks = localStorage.getItem(`tasks-${userKey}`);
+    if (storedTasks) setRawTasks(JSON.parse(storedTasks));
     const today = new Date().toISOString().split('T')[0];
     const storedEnergy = localStorage.getItem(`energy-${today}`);
     if (storedEnergy) setEnergyLevel(parseInt(storedEnergy));
@@ -102,11 +104,11 @@ function TimetablePage() {
       taskTime.setMinutes(task.start % 60);
 
       const delay = taskTime.getTime() - now.getTime();
-      console.log(`⏰ Scheduling: ${task.title} in ${delay / 1000} seconds`);
+      console.log(`Scheduling: ${task.title} in ${delay / 1000} seconds`);
 
       if (delay > 0) {
         setTimeout(() => {
-          console.log(`🔔 Triggering notification for: ${task.title}`);
+          console.log(`Triggering notification for: ${task.title}`);
           if (Notification.permission === 'granted') {
             const n = new Notification('⏰ FocusFlow Reminder', {
               body: `Time to get started on ${task.title}!`,
@@ -124,6 +126,53 @@ function TimetablePage() {
     });
   };
 
+  const generateGoalTasks = () => {
+    const selectedGoals = JSON.parse(localStorage.getItem("selectedGoals")) || [];
+    const goalTasks = [];
+
+    selectedGoals.forEach((goal) => {
+      switch (goal) {
+        case "Exercise regularly":
+          goalTasks.push({ title: "Workout Session", urgency: 2, duration: 30, fixed: false });
+          break;
+        case "Read 20 pages daily":
+          goalTasks.push({ title: "Reading Time", urgency: 3, duration: 30, fixed: false });
+          break;
+        case "Practice meditation":
+          goalTasks.push({ title: "Meditation", urgency: 2, duration: 15, fixed: false });
+          break;
+        case "Learn a new language":
+          goalTasks.push({ title: "Language Practice", urgency: 3, duration: 30, fixed: false });
+          break;
+        case "Work on personal project":
+          goalTasks.push({ title: "Project Work Session", urgency: 1, duration: 60, fixed: false });
+          break;
+        case "Improve diet & cooking":
+          goalTasks.push({ title: "Meal Prep / Cooking", urgency: 2, duration: 30, fixed: false });
+          break;
+        case "Write a journal":
+          goalTasks.push({ title: "Journaling", urgency: 2, duration: 30, fixed: false });
+          break;
+        case "Study for exams":
+          goalTasks.push({ title: "Focused Study", urgency: 3, duration: 60, fixed: false });
+          break;
+        case "Networking & meet new people":
+          goalTasks.push({ title: "Social Outreach", urgency: 1, duration: 30, fixed: false });
+          break;
+        case "Improve mental well-being":
+          goalTasks.push({ title: "Relaxation / Mindfulness", urgency: 2, duration: 30, fixed: false });
+          break;
+        case "Spend time outdoors":
+          goalTasks.push({ title: "Outdoor Walk", urgency: 2, duration: 30, fixed: false });
+          break;
+        default:
+          break;
+      }
+    });
+
+    return goalTasks;
+  };
+
   const generateTimetable = useCallback(() => {
     const statusPriority = { 'Almost completed': 0, 'Making progress': 1, 'Not started': 2 };
 
@@ -137,20 +186,30 @@ function TimetablePage() {
         fixed: true,
       }));
 
-    const sortedTasks = rawTasks
-      .filter((t) => !t.fixed)
-      .sort((a, b) => {
-        if (energyLevel >= 7) {
-          return b.urgency - a.urgency || statusPriority[a.status] - statusPriority[b.status];
-        }
-        if (energyLevel <= 4) {
-          return a.urgency - b.urgency || statusPriority[a.status] - statusPriority[b.status];
-        }
-        const completionBias = statusPriority[a.status] - statusPriority[b.status];
-        const urgencyBias = a.urgency - b.urgency;
-        const shortTaskBias = a.duration < 30 ? -1 : 0;
-        return completionBias || urgencyBias || shortTaskBias || a.duration - b.duration;
-      });
+    const goalTasks = generateGoalTasks();
+
+    const sortedTasks = [...rawTasks.filter((t) => !t.fixed), ...goalTasks].sort((a, b) => {
+      if (energyLevel >= 7) {
+        return (
+          b.urgency - a.urgency ||
+          statusPriority[a.status || "Not started"] -
+            statusPriority[b.status || "Not started"]
+        );
+      }
+      if (energyLevel <= 4) {
+        return (
+          a.urgency - b.urgency ||
+          statusPriority[a.status || "Not started"] -
+            statusPriority[b.status || "Not started"]
+        );
+      }
+      const completionBias =
+        statusPriority[a.status || "Not started"] -
+        statusPriority[b.status || "Not started"];
+      const urgencyBias = a.urgency - b.urgency;
+      const shortTaskBias = a.duration < 30 ? -1 : 0;
+      return completionBias || urgencyBias || shortTaskBias || a.duration - b.duration;
+    });
 
     const newTimetable = [...fixedTasks];
     let currentMinutes = startHour * 60;
