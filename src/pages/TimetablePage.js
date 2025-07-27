@@ -181,7 +181,6 @@ function TimetablePage() {
       totalMinsWorked += task.duration;
 
       const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
-      const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
       if (breakTask && currentMinutes + breakTask.duration <= endHour * 60) {
         while (!isSlotFree(newTimetable, currentMinutes, breakTask.duration)) currentMinutes += 5;
         breakTask.start = currentMinutes;
