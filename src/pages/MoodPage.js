@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 function MoodPage() {
   const [energy, setEnergy] = useState(5);
+  const [energy, setEnergy] = useState(5);
   const [savedEnergy, setSavedEnergy] = useState(null);
   const navigate = useNavigate();
 

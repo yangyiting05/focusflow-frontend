@@ -17,8 +17,11 @@ function TimetablePage() {
   const [historyStack, setHistoryStack] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [energyLevel, setEnergyLevel] = useState(5);
+  const [hasGenerated, setHasGenerated] = useState(false);
 
   const timetableRef = useRef(null);
+
+  const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
 
   const updateCurrentTimeLine = useCallback(() => {
     const now = new Date();
@@ -33,12 +36,22 @@ function TimetablePage() {
   }, [startHour, endHour]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(`tasks-${userKey}`);
-    if (stored) setRawTasks(JSON.parse(stored));
+    const storedTasks = localStorage.getItem(`tasks-${userKey}`);
+    if (storedTasks) setRawTasks(JSON.parse(storedTasks));
 
     const today = new Date().toISOString().split('T')[0];
     const storedEnergy = localStorage.getItem(`energy-${today}`);
     if (storedEnergy) setEnergyLevel(parseInt(storedEnergy));
+
+    const storedTimetable = localStorage.getItem(`timetable-${userKey}`);
+    if (storedTimetable) {
+      const loaded = JSON.parse(storedTimetable);
+      if (Array.isArray(loaded) && loaded.length > 0) {
+        setTimetable(loaded);
+        setOriginalTimetable(deepCopy(loaded));
+        setHasGenerated(true);
+      }
+    }
 
     const interval = setInterval(updateCurrentTimeLine, 60000);
     updateCurrentTimeLine();
@@ -49,11 +62,9 @@ function TimetablePage() {
     const isLunch = currentHour >= 11 && currentHour <= 13;
     const isDinner = currentHour >= 18 && currentHour <= 20;
 
-    // Strictly one meal per window (minimum 2-hour gap)
     if ((isLunch || isDinner) && (!lastBreakTime || Math.abs(currentHour * 60 - lastBreakTime) > 120)) {
       return { title: 'Meal Time', duration: 45, isBreak: true };
     }
-
     if (energyLevel <= 4 && totalMinsWorked >= 60) {
       return { title: 'Energy Break', duration: 30, isBreak: true };
     }
@@ -63,10 +74,12 @@ function TimetablePage() {
     return null;
   }, [energyLevel]);
 
-  const isSlotFree = useCallback((newTimetable, start, duration) => {
+  const isSlotFree = useCallback((newTimetable, start, duration, ignoreTitle = null) => {
     return !newTimetable.some(
       (t) =>
-        (start < t.start + t.duration && start + duration > t.start)
+        t.title !== ignoreTitle &&
+        start < t.start + t.duration &&
+        start + duration > t.start
     );
   }, []);
 
@@ -168,6 +181,7 @@ function TimetablePage() {
       totalMinsWorked += task.duration;
 
       const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
+      const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
       if (breakTask && currentMinutes + breakTask.duration <= endHour * 60) {
         while (!isSlotFree(newTimetable, currentMinutes, breakTask.duration)) currentMinutes += 5;
         breakTask.start = currentMinutes;
@@ -181,17 +195,20 @@ function TimetablePage() {
 
     const finalTable = newTimetable.sort((a, b) => a.start - b.start);
     setTimetable(finalTable);
-    setOriginalTimetable(finalTable);
+    setOriginalTimetable(deepCopy(finalTable));
     setHistoryStack([]);
+    setHasGenerated(true);
     localStorage.setItem(`timetable-${userKey}`, JSON.stringify(finalTable));
     setTimeout(updateCurrentTimeLine, 500);
     // ✅ Schedule push notifications after generating the timetable
     scheduleReminders(finalTable);
   }, [rawTasks, startHour, endHour, userKey, generateBreaks, isSlotFree, updateCurrentTimeLine, energyLevel]);
 
+  // ✅ Removed no-loop-func warning: precompute fixed positions
   const onDragEnd = (result) => {
     if (!result.destination || !editMode) return;
-    const items = Array.from(timetable);
+
+    const items = deepCopy(timetable);
     const [moved] = items.splice(result.source.index, 1);
     if (moved.fixed) return;
 
@@ -204,17 +221,46 @@ function TimetablePage() {
       targetStart += 5;
     }
     if (targetStart + moved.duration > endHour * 60) return;
+    if (targetStart + moved.duration > endHour * 60) {
+      console.warn("Task duration exceeds end of day, reverting");
+      return;
+    }
 
     moved.start = targetStart;
-    items.splice(result.destination.index, 0, moved);
+    items.push(moved);
+    let updated = items.sort((a, b) => a.start - b.start);
 
-    setHistoryStack((prev) => [...prev, timetable]);
-    setTimetable(items.sort((a, b) => a.start - b.start));
+    let currentTime = startHour * 60;
+    const fixedPositions = updated
+      .filter((t) => t.fixed)
+      .map((t) => ({ start: t.start, end: t.start + t.duration }));
+
+    for (let i = 0; i < updated.length; i++) {
+      const task = updated[i];
+      if (task.fixed) {
+        currentTime = task.start + task.duration + 5;
+        continue;
+      }
+
+      const blocked = fixedPositions.find((f) => currentTime < f.start && currentTime + task.duration > f.start);
+      if (blocked || currentTime + task.duration > endHour * 60) {
+        console.warn("Cannot place task due to fixed task or end limit, reverting");
+        setTimetable(deepCopy(timetable));
+        return;
+      }
+
+      task.start = currentTime;
+      currentTime += task.duration + 5;
+    }
+
+    setHistoryStack((prev) => [...prev, deepCopy(timetable)]);
+    setTimetable(updated.sort((a, b) => a.start - b.start));
+    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(updated));
   };
 
   const saveTimetable = () => {
     localStorage.setItem(`timetable-${userKey}`, JSON.stringify(timetable));
-    setOriginalTimetable(timetable);
+    setOriginalTimetable(deepCopy(timetable));
     setHistoryStack([]);
     setEditMode(false);
   };
@@ -223,16 +269,19 @@ function TimetablePage() {
     if (historyStack.length > 0) {
       const previous = historyStack[historyStack.length - 1];
       setHistoryStack(historyStack.slice(0, -1));
-      setTimetable(previous);
+      setTimetable(deepCopy(previous));
+      localStorage.setItem(`timetable-${userKey}`, JSON.stringify(previous));
     }
   };
 
   const resetTimetable = () => {
-    setTimetable([...originalTimetable]);
+    setTimetable(deepCopy(originalTimetable));
     setHistoryStack([]);
+    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(originalTimetable));
   };
 
   const formatTime = (minutes) => {
+    if (minutes === undefined || minutes === null) return "--:--";
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -307,61 +356,56 @@ function TimetablePage() {
           <div className="current-time-line"></div>
         </div>
 
-        <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="timetable">
-            {(provided) => (
-              <div className="task-column" {...provided.droppableProps} ref={provided.innerRef}>
-                {timetable.map((slot, index) => {
-                  const top = slot.start - startHour * 60;
-                  const height = (slot.duration / 60) * 60;
-                  return (
-                    <Draggable
-                      key={`task-${index}`}
-                      draggableId={`task-${index}`}
-                      index={index}
-                      isDragDisabled={!editMode || slot.fixed}
-                    >
-                      {(provided) => (
-                        <div
-                          className={`task-slot ${
-                            slot.isBreak ? 'break-task' : slot.fixed ? 'fixed' : ''} urgency-${
-                            slot.urgency
-                          }`}
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          style={{
-                            ...provided.draggableProps.style,
-                            top: `${Math.round(top / 5) * 5}px`,
-                            height: `${Math.round(height / 5) * 5}px`,
-                          }}
-                          title={`${slot.title} | Urgency: ${slot.urgency || '-'} | Duration: ${
-                            slot.duration
-                          } mins`}
-                        >
-                          <div className="task-title">
-                            {slot.isBreak ? slot.title : slot.title}{' '}
-                            ({formatTime(slot.start)} - {formatTime(slot.start + slot.duration)})
+        {hasGenerated && (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="timetable">
+              {(provided) => (
+                <div className="task-column" {...provided.droppableProps} ref={provided.innerRef}>
+                  {timetable.map((slot, index) => {
+                    if (slot.start === undefined || slot.duration === undefined) return null;
+                    const top = slot.start - startHour * 60;
+                    const height = (slot.duration / 60) * 60;
+                    return (
+                      <Draggable
+                        key={`task-${index}`}
+                        draggableId={`task-${index}`}
+                        index={index}
+                        isDragDisabled={!editMode || slot.fixed}
+                      >
+                        {(provided) => (
+                          <div
+                            className={`task-slot ${
+                              slot.isBreak ? 'break-task' : slot.fixed ? 'fixed' : ''
+                            } urgency-${slot.urgency}`}
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              top: `${Math.round(top / 5) * 5}px`,
+                              height: `${Math.round(height / 5) * 5}px`,
+                            }}
+                            title={`${slot.title} | Urgency: ${slot.urgency || '-'} | Duration: ${
+                              slot.duration
+                            } mins`}
+                          >
+                            <div className="task-title">
+                              {slot.title} ({formatTime(slot.start)} - {formatTime(slot.start + slot.duration)})
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  );
-                })}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        )}
       </div>
     </div>
   );
 }
 
 export default TimetablePage;
-
-
-
-
-
-
