@@ -106,7 +106,6 @@ function TodoPage() {
     }
   };
 
-  // ✅ FIX: Only generate/save timetable if none exists
   const goToTimetable = () => {
     const existingTimetable = localStorage.getItem(`timetable-${userKey}`);
     if (!existingTimetable || existingTimetable === '[]') {
@@ -125,7 +124,7 @@ function TodoPage() {
       <p className="dashboard-subtitle">Here you can add tasks you want to complete today.</p>
       <p className="urgency-hint">Urgency 1 = Highest priority, Urgency 5 = Lowest priority</p>
 
-      {/* ADD TASK ROW */}
+      {}
       <div className="add-task-container">
         <div className="add-task-row">
           <input
@@ -184,7 +183,7 @@ function TodoPage() {
             </div>
 
             {[...tasks]
-              .sort((a, b) => b.urgency - a.urgency)
+              .sort((a, b) => a.urgency - b.urgency)
               .map((task) => (
                 <div className={`task-row ${task.fixed ? 'fixed-time' : ''}`} key={task.id}>
                   {editingTaskId === task.id ? (

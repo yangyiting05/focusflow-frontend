@@ -20,7 +20,7 @@ function MoodPage() {
     const today = new Date().toISOString().split("T")[0];
     localStorage.setItem(`energy-${today}`, energy);
     setSavedEnergy(energy);
-    alert("✅ Your energy level for today has been saved!");
+    alert("Your energy level for today has been saved!");
   };
 
   return (
@@ -28,7 +28,7 @@ function MoodPage() {
       <button className="back-btn" onClick={() => navigate('/dashboard')}>
         ← Back to Dashboard
       </button>
-      <h2 className="dashboard-title">🌟 How’s Your Energy Today?</h2>
+      <h2 className="dashboard-title">How’s Your Energy Today?</h2>
       <p>Set your energy level (1 = very low, 10 = very high):</p>
       <input
         type="range"
