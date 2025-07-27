@@ -35,7 +35,6 @@ function TimetablePage() {
     }
   }, [startHour, endHour]);
 
-  // ✅ Persistent timetable logic
   useEffect(() => {
     const storedTasks = localStorage.getItem(`tasks-${userKey}`);
     if (storedTasks) setRawTasks(JSON.parse(storedTasks));
@@ -83,6 +82,49 @@ function TimetablePage() {
         start + duration > t.start
     );
   }, []);
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission().then((permission) => {
+        console.log('Notification permission:', permission);
+      });
+    }
+  }, []);
+
+  const scheduleReminders = (timetable) => {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications.');
+      return;
+    }
+
+    timetable.forEach((task) => {
+      const now = new Date();
+      const taskTime = new Date();
+      taskTime.setHours(Math.floor(task.start / 60));
+      taskTime.setMinutes(task.start % 60);
+
+      const delay = taskTime.getTime() - now.getTime();
+      console.log(`⏰ Scheduling: ${task.title} in ${delay / 1000} seconds`);
+
+      if (delay > 0) {
+        setTimeout(() => {
+          console.log(`🔔 Triggering notification for: ${task.title}`);
+          if (Notification.permission === 'granted') {
+            const n = new Notification('⏰ FocusFlow Reminder', {
+              body: `Time to get started on ${task.title}!`,
+              icon: '/logo192.png',
+            });
+            n.onclick = () => {
+              window.focus();
+              window.location.href = '/';
+            };
+          } else {
+            alert(`⏰ Reminder: Time to get started on ${task.title}!`);
+          }
+        }, delay);
+      }
+    });
+  };
 
   const generateTimetable = useCallback(() => {
     const statusPriority = { 'Almost completed': 0, 'Making progress': 1, 'Not started': 2 };
@@ -139,6 +181,7 @@ function TimetablePage() {
       totalMinsWorked += task.duration;
 
       const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
+      const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
       if (breakTask && currentMinutes + breakTask.duration <= endHour * 60) {
         while (!isSlotFree(newTimetable, currentMinutes, breakTask.duration)) currentMinutes += 5;
         breakTask.start = currentMinutes;
@@ -157,6 +200,8 @@ function TimetablePage() {
     setHasGenerated(true);
     localStorage.setItem(`timetable-${userKey}`, JSON.stringify(finalTable));
     setTimeout(updateCurrentTimeLine, 500);
+    // ✅ Schedule push notifications after generating the timetable
+    scheduleReminders(finalTable);
   }, [rawTasks, startHour, endHour, userKey, generateBreaks, isSlotFree, updateCurrentTimeLine, energyLevel]);
 
   // ✅ Removed no-loop-func warning: precompute fixed positions
@@ -168,6 +213,14 @@ function TimetablePage() {
     if (moved.fixed) return;
 
     let targetStart = items[result.destination.index]?.start || moved.start;
+    // Revalidate until no overlap
+    while (
+      targetStart + moved.duration <= endHour * 60 &&
+      !isSlotFree(items, targetStart, moved.duration)
+    ) {
+      targetStart += 5;
+    }
+    if (targetStart + moved.duration > endHour * 60) return;
     if (targetStart + moved.duration > endHour * 60) {
       console.warn("Task duration exceeds end of day, reverting");
       return;
