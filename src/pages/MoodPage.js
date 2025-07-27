@@ -3,7 +3,7 @@ import "./Dashboard.css";
 import { useNavigate } from "react-router-dom";
 
 function MoodPage() {
-  const [energy, setEnergy] = useState(5); // Default value
+  const [energy, setEnergy] = useState(5);
   const [savedEnergy, setSavedEnergy] = useState(null);
   const navigate = useNavigate();
 
@@ -48,21 +48,3 @@ function MoodPage() {
 }
 
 export default MoodPage;
-
-
-
-/*
-import React from 'react';
-import './Dashboard.css';
-
-function MoodPage() {
-  return (
-    <div className="dashboard-container">
-      <h2 className="dashboard-title">Mood Tracker</h2>
-      <p>Log how you’re feeling today to help improve your scheduling.</p>
-    </div>
-  );
-}
-
-export default MoodPage;
-*/

@@ -106,9 +106,13 @@ function TodoPage() {
     }
   };
 
+  // ✅ FIX: Only generate/save timetable if none exists
   const goToTimetable = () => {
-    const sortedTasks = [...tasks].sort((a, b) => a.urgency - b.urgency);
-    localStorage.setItem(`timetable-${userKey}`, JSON.stringify(sortedTasks));
+    const existingTimetable = localStorage.getItem(`timetable-${userKey}`);
+    if (!existingTimetable || existingTimetable === '[]') {
+      const sortedTasks = [...tasks].sort((a, b) => a.urgency - b.urgency);
+      localStorage.setItem(`timetable-${userKey}`, JSON.stringify(sortedTasks));
+    }
     navigate('/timetable');
   };
 
