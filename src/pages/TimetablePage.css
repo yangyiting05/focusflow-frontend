@@ -198,12 +198,11 @@ h2 {
   transition: background-color 0.4s ease;
 }
 
-/* New refined pastel palette */
-.task-slot.urgency-1 { background: #f4d7d7; } /* soft blush red */
-.task-slot.urgency-2 { background: #ffe4c4; } /* light peach */
-.task-slot.urgency-3 { background: #fff9c4; } /* pastel yellow */
-.task-slot.urgency-4 { background: #dcedc8; } /* soft green */
-.task-slot.urgency-5 { background: #d0e7ff; } /* light sky blue */
+.task-slot.urgency-1 { background: #f4d7d7; }
+.task-slot.urgency-2 { background: #ffe4c4; }
+.task-slot.urgency-3 { background: #fff9c4; }
+.task-slot.urgency-4 { background: #dcedc8; }
+.task-slot.urgency-5 { background: #d0e7ff; }
 
 .task-slot.fixed {
   background: repeating-linear-gradient(

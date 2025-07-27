@@ -1,4 +1,3 @@
-//test
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
@@ -38,8 +37,6 @@ function TimetablePage() {
 
   useEffect(() => {
     const storedTasks = localStorage.getItem(`tasks-${userKey}`);
-    if (storedTasks) setRawTasks(JSON.parse(storedTasks));
-
     const today = new Date().toISOString().split('T')[0];
     const storedEnergy = localStorage.getItem(`energy-${today}`);
     if (storedEnergy) setEnergyLevel(parseInt(storedEnergy));
@@ -200,11 +197,9 @@ function TimetablePage() {
     setHasGenerated(true);
     localStorage.setItem(`timetable-${userKey}`, JSON.stringify(finalTable));
     setTimeout(updateCurrentTimeLine, 500);
-    // ✅ Schedule push notifications after generating the timetable
     scheduleReminders(finalTable);
   }, [rawTasks, startHour, endHour, userKey, generateBreaks, isSlotFree, updateCurrentTimeLine, energyLevel]);
 
-  // ✅ Removed no-loop-func warning: precompute fixed positions
   const onDragEnd = (result) => {
     if (!result.destination || !editMode) return;
 
@@ -213,7 +208,6 @@ function TimetablePage() {
     if (moved.fixed) return;
 
     let targetStart = items[result.destination.index]?.start || moved.start;
-    // Revalidate until no overlap
     while (
       targetStart + moved.duration <= endHour * 60 &&
       !isSlotFree(items, targetStart, moved.duration)
@@ -299,7 +293,7 @@ function TimetablePage() {
         Plan your day effectively with smart breaks and fixed-time task support.
       </p>
       <p className="dashboard-subtitle">
-        ✅ Today’s Energy Level: <strong>{energyLevel} / 10</strong>
+        Today’s Energy Level: <strong>{energyLevel} / 10</strong>
       </p>
 
       <div className="time-select-row">
