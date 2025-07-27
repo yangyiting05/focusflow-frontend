@@ -1,4 +1,3 @@
-//test can delete
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
@@ -17,11 +16,10 @@ function TimetablePage() {
   const [originalTimetable, setOriginalTimetable] = useState([]);
   const [historyStack, setHistoryStack] = useState([]);
   const [editMode, setEditMode] = useState(false);
-  const [energyLevel, setEnergyLevel] = useState(5); 
+  const [energyLevel, setEnergyLevel] = useState(5);
 
   const timetableRef = useRef(null);
 
-  /** ✅ Memoized helper for current time line */
   const updateCurrentTimeLine = useCallback(() => {
     const now = new Date();
     const totalMinutes = now.getHours() * 60 + now.getMinutes();
@@ -34,7 +32,6 @@ function TimetablePage() {
     }
   }, [startHour, endHour]);
 
-  /** ✅ Load tasks & timetable persistence */
   useEffect(() => {
     const stored = localStorage.getItem(`tasks-${userKey}`);
     if (stored) setRawTasks(JSON.parse(stored));
@@ -48,12 +45,12 @@ function TimetablePage() {
     return () => clearInterval(interval);
   }, [userKey, updateCurrentTimeLine]);
 
-  /** ✅ Memoized break generator */
   const generateBreaks = useCallback((totalMinsWorked, currentHour, lastBreakTime) => {
     const isLunch = currentHour >= 11 && currentHour <= 13;
     const isDinner = currentHour >= 18 && currentHour <= 20;
 
-    if ((isLunch || isDinner) && (!lastBreakTime || currentHour * 60 - lastBreakTime >= 90)) {
+    // Strictly one meal per window (minimum 2-hour gap)
+    if ((isLunch || isDinner) && (!lastBreakTime || Math.abs(currentHour * 60 - lastBreakTime) > 120)) {
       return { title: 'Meal Time', duration: 45, isBreak: true };
     }
 
@@ -64,18 +61,58 @@ function TimetablePage() {
     if (totalMinsWorked >= 90) return { title: 'Short Break', duration: 15, isBreak: true };
 
     return null;
-  }, []);
+  }, [energyLevel]);
 
-  /** ✅ Memoized slot checker */
   const isSlotFree = useCallback((newTimetable, start, duration) => {
     return !newTimetable.some(
       (t) =>
-        (start >= t.start && start < t.start + t.duration) ||
-        (start + duration > t.start && start + duration <= t.start + t.duration)
+        (start < t.start + t.duration && start + duration > t.start)
     );
   }, []);
 
-  /** ✅ Generate timetable */
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission().then((permission) => {
+        console.log('Notification permission:', permission);
+      });
+    }
+  }, []);
+
+  const scheduleReminders = (timetable) => {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications.');
+      return;
+    }
+
+    timetable.forEach((task) => {
+      const now = new Date();
+      const taskTime = new Date();
+      taskTime.setHours(Math.floor(task.start / 60));
+      taskTime.setMinutes(task.start % 60);
+
+      const delay = taskTime.getTime() - now.getTime();
+      console.log(`⏰ Scheduling: ${task.title} in ${delay / 1000} seconds`);
+
+      if (delay > 0) {
+        setTimeout(() => {
+          console.log(`🔔 Triggering notification for: ${task.title}`);
+          if (Notification.permission === 'granted') {
+            const n = new Notification('⏰ FocusFlow Reminder', {
+              body: `Time to get started on ${task.title}!`,
+              icon: '/logo192.png',
+            });
+            n.onclick = () => {
+              window.focus();
+              window.location.href = '/';
+            };
+          } else {
+            alert(`⏰ Reminder: Time to get started on ${task.title}!`);
+          }
+        }, delay);
+      }
+    });
+  };
+
   const generateTimetable = useCallback(() => {
     const statusPriority = { 'Almost completed': 0, 'Making progress': 1, 'Not started': 2 };
 
@@ -130,11 +167,7 @@ function TimetablePage() {
       currentMinutes += task.duration;
       totalMinsWorked += task.duration;
 
-      const breakTask = generateBreaks(
-        totalMinsWorked,
-        Math.floor(currentMinutes / 60),
-        lastBreakTime
-      );
+      const breakTask = generateBreaks(totalMinsWorked, Math.floor(currentMinutes / 60), lastBreakTime);
       if (breakTask && currentMinutes + breakTask.duration <= endHour * 60) {
         while (!isSlotFree(newTimetable, currentMinutes, breakTask.duration)) currentMinutes += 5;
         breakTask.start = currentMinutes;
@@ -152,9 +185,10 @@ function TimetablePage() {
     setHistoryStack([]);
     localStorage.setItem(`timetable-${userKey}`, JSON.stringify(finalTable));
     setTimeout(updateCurrentTimeLine, 500);
-  }, [rawTasks, startHour, endHour, userKey, generateBreaks, isSlotFree, updateCurrentTimeLine]);
+    // ✅ Schedule push notifications after generating the timetable
+    scheduleReminders(finalTable);
+  }, [rawTasks, startHour, endHour, userKey, generateBreaks, isSlotFree, updateCurrentTimeLine, energyLevel]);
 
-  /** ✅ Drag logic (fixed tasks locked) */
   const onDragEnd = (result) => {
     if (!result.destination || !editMode) return;
     const items = Array.from(timetable);
@@ -162,6 +196,7 @@ function TimetablePage() {
     if (moved.fixed) return;
 
     let targetStart = items[result.destination.index]?.start || moved.start;
+    // Revalidate until no overlap
     while (
       targetStart + moved.duration <= endHour * 60 &&
       !isSlotFree(items, targetStart, moved.duration)
@@ -305,12 +340,8 @@ function TimetablePage() {
                           } mins`}
                         >
                           <div className="task-title">
-                            {slot.isBreak
-                              ? slot.title
-                              : slot.title}{' '}
-                            ({formatTime(slot.start)} - {formatTime(
-                              slot.start + slot.duration
-                            )})
+                            {slot.isBreak ? slot.title : slot.title}{' '}
+                            ({formatTime(slot.start)} - {formatTime(slot.start + slot.duration)})
                           </div>
                         </div>
                       )}
@@ -328,6 +359,8 @@ function TimetablePage() {
 }
 
 export default TimetablePage;
+
+
 
 
 
